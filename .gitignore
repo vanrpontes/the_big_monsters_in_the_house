@@ -1,0 +1,13 @@
+# Ignorar segredos do Streamlit em qualquer lugar do projeto
+**/.streamlit/
+**/secrets.toml
+
+# Ignorar ambientes virtuais e cache
+venv/
+.venv/
+**/__pycache__/
+.pytest_cache/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
