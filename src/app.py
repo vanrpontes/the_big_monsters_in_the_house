@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import plotly.express as px
 from datetime import datetime, timedelta
 
 # 1. Configuração da página
@@ -30,24 +31,22 @@ try:
         'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
     }
 
-    # Criando as colunas necessárias ANTES de qualquer filtro
+    # Criando as colunas necessárias
     df_raw['atividade'] = pd.to_numeric(df_raw['atividade'], errors='coerce').fillna(0)
     df_raw['peso'] = pd.to_numeric(df_raw['peso'], errors='coerce')
+    
     if 'diasemana' in df_raw.columns:
         df_raw['diasemana_pt'] = df_raw['diasemana'].map(dias_pt)
     else:
         df_raw['diasemana_pt'] = df_raw['data'].dt.day_name().map(dias_pt)
 
-    # --- FILTROS PARA STATUS E TABELA (Até Ontem) ---
+    # --- FILTROS E CÁLCULOS ---
     df_historico = df_raw[df_raw['data'] <= ontem].copy()
     treinos_janela = df_historico[(df_historico['data'] >= inicio_janela)]['atividade'].sum()
-
-    # --- CÁLCULOS KPI ---
     treinos_total = int(df_raw[df_raw['data'] <= hoje]['atividade'].sum())
-    # Peso atual pode considerar hoje se houver registro
     peso_atual = df_raw[df_raw['data'] <= hoje]['peso'].dropna().iloc[-1] if not df_raw['peso'].dropna().empty else 89.0
 
-    # --- DASHBOARD FRONT-END (Layout Alinhado) ---
+    # --- DASHBOARD FRONT-END ---
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -58,18 +57,55 @@ try:
         st.metric("Peso Atual", f"{peso_atual:.1f} kg", f"{falta_peso:.1f} kg para a meta", delta_color="inverse")
 
     with col3:
-        # Definindo Status e Cor
         if treinos_janela >= 5:
-            status_msg, cor = "TÁ SAINDO DA JAULA O MONSTRO! 🔥", "#FF4B4B" # Vermelho/Laranja
+            status_msg, cor = "TÁ SAINDO DA JAULA O MONSTRO! 🔥", "#FF4B4B"
         elif treinos_janela >= 3:
-            status_msg, cor = "MONSTRO ATIVO 🦾", "#00FF00" # Verde
+            status_msg, cor = "MONSTRO ATIVO 🦾", "#00FF00"
         else:
-            status_msg, cor = "SNORLAX HIBERNANDO 😴", "#777777" # Cinza
+            status_msg, cor = "SNORLAX HIBERNANDO 😴", "#777777"
         
-        # Estilizando o Status para ficar no mesmo nível visual das métricas
         st.markdown(f"<p style='color: #888; font-size: 14px; margin-bottom: 5px;'>Status Atual (D-7)</p>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='color: {cor}; margin-top: -15px;'>{status_msg}</h3>", unsafe_allow_html=True)
         st.caption(f"Baseado em {int(treinos_janela)} treinos nos últimos 7 dias.")
+
+    st.markdown("---")
+    
+    # --- HEATMAP ESTILO GITHUB ---
+    st.subheader("🔥 Heatmap de Consistência (Semanal)")
+    
+    df_heat = df_raw.copy()
+    # LINHA CORRIGIDA ABAIXO:
+    df_heat['semana'] = df_heat['data'].dt.isocalendar().week
+    df_heat['dia_num'] = df_heat['data'].dt.dayofweek 
+    
+    fig = px.imshow(
+        df_heat.pivot_table(index='dia_num', columns='semana', values='atividade', aggfunc='sum').fillna(0),
+        labels=dict(x="Semana do Ano", y="Dia da Semana", color="Treinou"),
+        x=df_heat.pivot_table(index='dia_num', columns='semana', values='atividade').columns,
+        y=['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+        color_continuous_scale=[[0, "#161b22"], [1, "#39d353"]],
+    )
+    
+    fig.update_layout(
+        height=250, 
+        margin=dict(l=0, r=0, t=0, b=0),
+        coloraxis_showscale=False,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
+    )
+
+    # Ajuste do eixo X para pular de 4 em 4
+    min_sem = int(df_heat['semana'].min())
+    fig.update_xaxes(
+        side="bottom", 
+        showgrid=False,
+        tickmode='linear',
+        tick0=min_sem,
+        dtick=4
+    )
+    fig.update_yaxes(showgrid=False)
+    
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     st.markdown("---")
     
@@ -79,13 +115,10 @@ try:
     df_visual['treino'] = df_visual['atividade'].map({1: '✅ TREINEI', 0: '❌ FALTEI'})
     
     filtro = st.radio("Filtrar histórico:", ["Todos os dias", "Apenas dias de treino"], horizontal=True)
-    
     if filtro == "Apenas dias de treino":
         df_visual = df_visual[df_visual['atividade'] == 1]
 
     st.subheader("🗓️ Histórico de Atividades (Fechado D-1)")
-    
-    # Garantindo que as colunas existem antes de exibir para não dar erro de Index
     colunas_exibicao = ['data_formatada', 'diasemana_pt', 'treino', 'peso']
     
     st.dataframe(
@@ -102,4 +135,3 @@ try:
 
 except Exception as e:
     st.error(f"Erro detectado: {e}")
-    st.info("Dica: Verifique se as colunas na planilha estão com os nomes corretos.")
