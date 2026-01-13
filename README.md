@@ -1,5 +1,3 @@
-# The Big Monsters in the House
-
 # 👹 The Big Monster's in the House
 
 ## 📊 Sobre o Projeto
