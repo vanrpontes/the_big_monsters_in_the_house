@@ -1,13 +1,14 @@
-# Ignorar segredos do Streamlit em qualquer lugar do projeto
-**/.streamlit/
+# --- SEGURANÇA (O mais importante) ---
+# Ignora a pasta .streamlit e o arquivo de senhas em qualquer diretório
+.streamlit/
 **/secrets.toml
 
-# Ignorar ambientes virtuais e cache
+# --- CACHE E AMBIENTE ---
+__pycache__/
+*.pyc
 venv/
 .venv/
-**/__pycache__/
-.pytest_cache/
 
-# Arquivos do sistema
+# --- ARQUIVOS DE SISTEMA ---
 .DS_Store
 Thumbs.db
