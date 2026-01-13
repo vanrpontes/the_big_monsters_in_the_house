@@ -11,20 +11,20 @@ Este projeto foi desenvolvido para monitorar minha jornada de saúde e performan
 
 ---
 
-## 🛠️ Stack Tech
-* **Fonte de Dados:** Google Sheets (Backend de input rápido)
-* **Linguagem:** Python
-* **Dashboard:** Streamlit
-* **Visualização:** Plotly (Gráficos interativos)
-* **Deployment:** Streamlit Community Cloud
+## 🛠️ Stack Tech e Bibliotecas
+* **Streamlit**: Framework principal do Dashboard.
+* **Pandas**: Manipulação e tratamento de dados.
+* **Plotly**: Gráficos interativos (Heatmap de consistência).
+* **Streamlit GSheets Connection**: Integração segura com Google Sheets.
+* **Streamlit Secrets**: Proteção de credenciais e URLs.
 
 ---
 
-## 📈 Funcionalidades Planejadas
-- [ ] **Monster Status:** Indicador dinâmico de ritmo baseado nos últimos 7 dias.
-- [ ] **Heatmap de Disciplina:** Visualização para frequência de treinos.
-- [ ] **Burn-down Chart:** Acompanhamento da meta de peso vs. progresso real.
-- [ ] **Previsão de Atingimento:** Estimativa de data para o peso alvo com base na tendência atual.
+## 📈 Funcionalidades Implementadas
+- [x] **Monster Status:** Indicador dinâmico de ritmo baseado nos últimos 7 dias.
+- [x] **Heatmap de Disciplina:** Visualização estilo GitHub para frequência de treinos.
+- [x] **KPIs de Performance:** Acompanhamento de peso e progresso da meta de treinos.
+- [x] **Histórico Inteligente:** Tabela filtrável com fechamento D-1.
 
 ---
 
