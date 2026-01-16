@@ -102,16 +102,52 @@ try:
     # --- HEATMAP ESTILO GITHUB ---
     st.subheader("🔥 Mapa de Calor de Consistência (Semanal)")
    
+    # Preparação dos dados
     df_heat = df_historico.copy()
+    
+    # Ajusta dia da semana: Domingo=0, Sábado=6 (padrão ISO começa na segunda)
+    df_heat['dia_num'] = (df_heat['data'].dt.dayofweek + 1) % 7  # Domingo vira 0
     df_heat['semana'] = df_heat['data'].dt.isocalendar().week
-    df_heat['dia_num'] = df_heat['data'].dt.dayofweek
-   
+    
+    # Cria matriz completa do ano (todas as 53 semanas x 7 dias)
+    todas_semanas = list(range(1, 54))  # Semanas 1-53
+    todos_dias = list(range(7))  # 0=Dom, 1=Seg, ..., 6=Sáb
+    
+    # Pivot com dados reais
+    pivot_data = df_heat.pivot_table(
+        index='dia_num', 
+        columns='semana', 
+        values='atividade', 
+        aggfunc='sum'
+    ).reindex(index=todos_dias, columns=todas_semanas, fill_value=0)
+    
+    # Calcula total de treinos por semana para o hover
+    treinos_por_semana = df_heat.groupby('semana')['atividade'].sum().reindex(todas_semanas, fill_value=0)
+    
+    # Cria matriz de texto customizada para hover
+    hover_text = []
+    for dia in todos_dias:
+        linha_hover = []
+        for sem in todas_semanas:
+            treinos_semana = int(treinos_por_semana[sem])
+            nome_dia = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][dia]
+            linha_hover.append(f"Semana {sem}<br>{nome_dia}<br>{treinos_semana} treinos")
+        hover_text.append(linha_hover)
+    
+    # Cria o heatmap
     fig = px.imshow(
-        df_heat.pivot_table(index='dia_num', columns='semana', values='atividade', aggfunc='sum').fillna(0),
-        labels=dict(x="Semana do Ano", y="Dia da Semana", color="Treinou"),
-        x=df_heat.pivot_table(index='dia_num', columns='semana', values='atividade').columns,
-        y=['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+        pivot_data,
+        labels=dict(x="Semana do Ano", y="", color="Treinou"),
+        x=todas_semanas,
+        y=['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
         color_continuous_scale=[[0, "#161b22"], [1, "#39d353"]],
+        aspect="auto"
+    )
+    
+    # Atualiza com hover customizado
+    fig.update_traces(
+        hovertemplate='%{customdata}<extra></extra>',
+        customdata=hover_text
     )
 
     fig.update_layout(
@@ -122,18 +158,17 @@ try:
         paper_bgcolor="rgba(0,0,0,0)"
     )
 
-    # Ajuste do eixo X para pular de 4 em 4
-    min_sem = int(df_heat['semana'].min())
+    # Ajuste do eixo X: mostra semanas de 4 em 4
     fig.update_xaxes(
         side="bottom",
         showgrid=False,
         tickmode='linear',
-        tick0=min_sem,
-        dtick=4
+        tick0=1,
+        dtick=4,
+        range=[0.5, 53.5]  # Força mostrar todas as semanas
     )
     fig.update_yaxes(showgrid=False)
 
-  
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     st.markdown("---")
