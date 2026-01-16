@@ -10,12 +10,17 @@ st.set_page_config(page_title="The Big Monster's Dashboard", layout="wide", page
 st.title("The Big Monster's in the House")
 st.markdown("---")
 
-url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+# Verificação de segurança para o segredo da conexão
+if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+    url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+else:
+    st.error("Erro: Configuração de segredos (secrets) do GSheets não encontrada.")
+    st.stop()
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
     
-    # AJUSTE 1: TTL reduzido para 5 segundos para refletir mudanças rápidas (ideal para o vídeo)
+    # AJUSTE 1: TTL reduzido para 5 segundos para refletir mudanças rápidas
     df_raw = conn.read(spreadsheet=url, ttl="5s") 
     df_raw.columns = df_raw.columns.str.strip().str.lower()
     
@@ -32,8 +37,7 @@ try:
         'Thursday': 'Quinta-feira', 'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
     }
 
-    # AJUSTE 2: Deixamos 'atividade' como numeric mas sem fillna(0) global 
-    # para diferenciar o que é falta (0) do que é apenas dia não preenchido (NaN)
+    # AJUSTE 2: Deixamos 'atividade' como numeric
     df_raw['atividade'] = pd.to_numeric(df_raw['atividade'], errors='coerce')
     df_raw['peso'] = pd.to_numeric(df_raw['peso'], errors='coerce')
     
@@ -42,11 +46,10 @@ try:
     else:
         df_raw['diasemana_pt'] = df_raw['data'].dt.day_name().map(dias_pt)
 
-    # AJUSTE 3: Filtro unificado até HOJE (removemos o 'ontem')
+    # AJUSTE 3: Filtro unificado até HOJE
     df_historico = df_raw[df_raw['data'] <= hoje].copy()
 
     # --- CÁLCULOS ---
-    # Soma de treinos (ignora vazios automaticamente)
     treinos_janela = df_historico[(df_historico['data'] >= inicio_janela)]['atividade'].sum()
     treinos_total = int(df_historico['atividade'].sum())
     
@@ -73,4 +76,10 @@ try:
         
         st.markdown(f"<p style='color: #888; font-size: 14px; margin-bottom: 5px;'>Status Atual (Tempo Real)</p>", unsafe_allow_html=True)
         st.markdown(f"<h3 style='color: {cor}; margin-top: -15px;'>{status_msg}</h3>", unsafe_allow_html=True)
-        st.caption(f"Base
+
+    # Linha de rodapé corrigida
+    st.divider()
+    st.caption(f"Base de Dados Conectada: Google Sheets | Última atualização: {datetime.now().strftime('%H:%M:%S')}")
+
+except Exception as e:
+    st.error(f"Erro ao carregar dados: {e}")
