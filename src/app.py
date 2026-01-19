@@ -105,20 +105,29 @@ try:
     # Preparação dos dados
     df_heat = df_historico.copy()
     
-    # CORREÇÃO: Ajusta dia da semana para Domingo=0
+    # CORREÇÃO: Ajusta dia da semana para Domingo=0, Segunda=1, etc
     df_heat['dia_num'] = (df_heat['data'].dt.dayofweek + 1) % 7
     
-    # CORREÇÃO: Calcula semana começando no DOMINGO
-    # Subtrai os dias desde o domingo mais próximo e divide por 7
-    df_heat['dias_desde_domingo'] = (df_heat['data'].dt.dayofweek + 1) % 7
-    df_heat['domingo_da_semana'] = df_heat['data'] - pd.to_timedelta(df_heat['dias_desde_domingo'], unit='D')
-    
-    # Cria número da semana baseado no primeiro domingo do ano
+    # CORREÇÃO: Calcula semana considerando que a semana 1 pode ser incompleta
+    # Primeiro dia do ano
     primeiro_dia_ano = pd.Timestamp(f'{df_heat["data"].dt.year.iloc[0]}-01-01')
-    primeiro_domingo = primeiro_dia_ano + pd.Timedelta(days=(6 - primeiro_dia_ano.dayofweek) % 7)
     
-    df_heat['semana'] = ((df_heat['domingo_da_semana'] - primeiro_domingo).dt.days // 7) + 1
-    df_heat['semana'] = df_heat['semana'].clip(lower=1)
+    # Se o ano não começou num domingo, a semana 1 é incompleta
+    # Encontra o primeiro sábado do ano (fim da semana 1 incompleta)
+    dias_ate_sabado = (5 - primeiro_dia_ano.dayofweek) % 7
+    primeiro_sabado = primeiro_dia_ano + pd.Timedelta(days=dias_ate_sabado)
+    
+    # Calcula qual semana cada data pertence
+    def calcular_semana(data):
+        if data <= primeiro_sabado:
+            return 1  # Semana 1 (incompleta)
+        else:
+            # A partir do primeiro domingo após o primeiro sábado
+            primeiro_domingo = primeiro_sabado + pd.Timedelta(days=1)
+            dias_desde_primeiro_domingo = (data - primeiro_domingo).days
+            return (dias_desde_primeiro_domingo // 7) + 2
+    
+    df_heat['semana'] = df_heat['data'].apply(calcular_semana)
     
     # Cria matriz completa do ano (todas as 53 semanas x 7 dias)
     todas_semanas = list(range(1, 54))
