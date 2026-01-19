@@ -18,7 +18,7 @@ url = st.secrets["connections"]["gsheets"]["spreadsheet"]
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
-    df_raw = conn.read(spreadsheet=url, ttl="10m")
+    df_raw = conn.read(spreadsheet=url, ttl="10s")
     df_raw.columns = df_raw.columns.str.strip().str.lower()
 
   
