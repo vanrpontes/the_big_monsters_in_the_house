@@ -99,18 +99,29 @@ try:
 
     st.markdown("---")
 
-    # --- HEATMAP ESTILO GITHUB ---
+    # --- HEATMAP ESTILO GITHUB (CORRIGIDO) ---
     st.subheader("🔥 Mapa de Calor de Consistência (Semanal)")
    
     # Preparação dos dados
     df_heat = df_historico.copy()
     
-    # Ajusta dia da semana: Domingo=0, Sábado=6 (padrão ISO começa na segunda)
-    df_heat['dia_num'] = (df_heat['data'].dt.dayofweek + 1) % 7  # Domingo vira 0
-    df_heat['semana'] = df_heat['data'].dt.isocalendar().week
+    # CORREÇÃO: Ajusta dia da semana para Domingo=0
+    df_heat['dia_num'] = (df_heat['data'].dt.dayofweek + 1) % 7
+    
+    # CORREÇÃO: Calcula semana começando no DOMINGO
+    # Subtrai os dias desde o domingo mais próximo e divide por 7
+    df_heat['dias_desde_domingo'] = (df_heat['data'].dt.dayofweek + 1) % 7
+    df_heat['domingo_da_semana'] = df_heat['data'] - pd.to_timedelta(df_heat['dias_desde_domingo'], unit='D')
+    
+    # Cria número da semana baseado no primeiro domingo do ano
+    primeiro_dia_ano = pd.Timestamp(f'{df_heat["data"].dt.year.iloc[0]}-01-01')
+    primeiro_domingo = primeiro_dia_ano + pd.Timedelta(days=(6 - primeiro_dia_ano.dayofweek) % 7)
+    
+    df_heat['semana'] = ((df_heat['domingo_da_semana'] - primeiro_domingo).dt.days // 7) + 1
+    df_heat['semana'] = df_heat['semana'].clip(lower=1)
     
     # Cria matriz completa do ano (todas as 53 semanas x 7 dias)
-    todas_semanas = list(range(1, 54))  # Semanas 1-53
+    todas_semanas = list(range(1, 54))
     todos_dias = list(range(7))  # 0=Dom, 1=Seg, ..., 6=Sáb
     
     # Pivot com dados reais
@@ -165,7 +176,7 @@ try:
         tickmode='linear',
         tick0=1,
         dtick=4,
-        range=[0.5, 53.5]  # Força mostrar todas as semanas
+        range=[0.5, 53.5]
     )
     fig.update_yaxes(showgrid=False)
 
